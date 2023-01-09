@@ -1,0 +1,358 @@
+DROP TABLE IF EXISTS requestevaluation;
+DROP TABLE IF EXISTS needs;
+DROP TABLE IF EXISTS evaluationresult;
+DROP TABLE IF EXISTS evaluations;
+DROP TABLE IF EXISTS antikeim;
+DROP TABLE IF EXISTS job;
+DROP TABLE IF EXISTS evaluator;
+DROP TABLE IF EXISTS manager;
+DROP TABLE IF EXISTS company;
+DROP TABLE IF EXISTS employee_lang;
+DROP TABLE IF EXISTS has_degree;
+DROP TABLE IF EXISTS project;
+DROP TABLE IF EXISTS employee;
+DROP TABLE IF EXISTS admin;
+DROP TABLE IF EXISTS log;
+DROP TABLE IF EXISTS degree;
+DROP TABLE IF EXISTS user;
+
+CREATE TABLE user (
+    username VARCHAR(12) NOT NULL,
+    password VARCHAR(10) NOT NULL,
+    reg_date DATE NOT NULL,
+    name VARCHAR(25) NOT NULL,
+    surname VARCHAR(35) NOT NULL,
+    email VARCHAR(30) NOT NULL,
+    PRIMARY KEY (username)
+)  ENGINE=INNODB;
+
+CREATE TABLE degree (
+    titlos VARCHAR(50) NOT NULL,
+    idryma VARCHAR(40) NOT NULL,
+    bathmida ENUM('LYKEIO', 'UNIV', 'MASTER', 'PHD') NOT NULL,
+    PRIMARY KEY (titlos),
+    UNIQUE (idryma)
+);
+
+CREATE TABLE log (
+    username VARCHAR(12) NOT NULL,
+    datetime DATETIME NOT NULL,
+    execution_success SET('YES', 'NO') NOT NULL,
+    type SET('INSERT', 'DELETE', 'UPDATE') NOT NULL,
+    table_affected VARCHAR(20) NOT NULL,
+    PRIMARY KEY (username),
+    CONSTRAINT USLG FOREIGN KEY (username)
+        REFERENCES user (username)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE admin (
+    username VARCHAR(12) NOT NULL,
+    PRIMARY KEY (username),
+    CONSTRAINT AU FOREIGN KEY (username)
+        REFERENCES user (username)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE employee (
+    username VARCHAR(12) NOT NULL,
+    bio TEXT NOT NULL,
+    sistatikes VARCHAR(35) NULL,
+    certificates VARCHAR(35) NULL,
+    awards VARCHAR(35) NULL,
+    PRIMARY KEY (username),
+    CONSTRAINT EMPU FOREIGN KEY (username)
+        REFERENCES user (username)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE project (
+    username VARCHAR(12) NOT NULL,
+    num TINYINT(4) NOT NULL,
+    descr TEXT NOT NULL,
+    url VARCHAR(60) NOT NULL,
+    PRIMARY KEY (num , username),
+    CONSTRAINT PROEMP FOREIGN KEY (username)
+        REFERENCES employee (username)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE has_degree (
+    deg_title VARCHAR(50) NOT NULL,
+    deg_idryma VARCHAR(40) NOT NULL,
+    username VARCHAR(12) NOT NULL,
+    etos YEAR(4) NOT NULL,
+    grade FLOAT(3 , 1 ) NOT NULL,
+    PRIMARY KEY (deg_title , deg_idryma , username),
+    CONSTRAINT TITDEG FOREIGN KEY (deg_title)
+        REFERENCES degree (titlos)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT IDRDEG FOREIGN KEY (deg_idryma)
+        REFERENCES degree (idryma)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT EDEG FOREIGN KEY (username)
+        REFERENCES employee (username)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE employee_lang (
+    username VARCHAR(12) NOT NULL,
+    lang SET('EN', 'FR', 'SP', 'GR') NOT NULL,
+    PRIMARY KEY (lang , username),
+    CONSTRAINT LANGE FOREIGN KEY (username)
+        REFERENCES employee (username)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE company (
+    afm CHAR(9) NOT NULL,
+    doy VARCHAR(15) NOT NULL,
+    name VARCHAR(35) NOT NULL,
+    phone BIGINT(16) NOT NULL,
+    street VARCHAR(15) NOT NULL,
+    num TINYINT(4) NOT NULL,
+    city VARCHAR(15) NOT NULL,
+    country VARCHAR(15) NOT NULL,
+    PRIMARY KEY (AFM)
+);
+
+CREATE TABLE manager (
+    username VARCHAR(12) NOT NULL,
+    exp_years TINYINT(4) NOT NULL,
+    firm CHAR(9) NULL,
+    PRIMARY KEY (username),
+    CONSTRAINT MU FOREIGN KEY (username)
+        REFERENCES user (username)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT MAFM FOREIGN KEY (firm)
+        REFERENCES company (AFM)
+        ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE evaluator (
+    username VARCHAR(12) NOT NULL,
+    exp_years TINYINT(4) NOT NULL,
+    firm CHAR(9) NULL,
+    PRIMARY KEY (username),
+    CONSTRAINT EVU FOREIGN KEY (username)
+        REFERENCES user (username)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT EVAFM FOREIGN KEY (firm)
+        REFERENCES company (AFM)
+        ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+
+CREATE TABLE job (
+    id INT(4) NOT NULL,
+    start_date DATE NOT NULL,
+    salary FLOAT(6 , 1 ) NOT NULL,
+    position VARCHAR(40) NOT NULL,
+    edra VARCHAR(45) NOT NULL,
+    ev_username VARCHAR(12) NULL,
+    announce_date DATETIME NOT NULL,
+    submission_deadline DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT JOBEV FOREIGN KEY (ev_username)
+        REFERENCES evaluator (username)
+        ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE antikeim (
+    title VARCHAR(36) NOT NULL,
+    descr TINYTEXT NOT NULL,
+    belongs_to_title VARCHAR(36) NULL,
+    PRIMARY KEY (title),
+    CONSTRAINT ANTPARENT FOREIGN KEY (belongs_to_title)
+        REFERENCES antikeim (title)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE evaluations (
+    pevid INT(4) NOT NULL,
+    ev_username VARCHAR(12) NULL,
+    aksiologhsh_1 FLOAT(2 , 1 ) NULL,
+    aksiologhsh_2 FLOAT(2 , 1 ) NULL,
+    aksiologhsh_3 FLOAT(2 , 1 ) NULL,
+    PRIMARY KEY (pevid),
+    CONSTRAINT EVEV FOREIGN KEY (ev_username)
+        REFERENCES evaluator (username)
+        ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE evaluationresult (
+    pevid INT(4) NOT NULL,
+    evid INT(4) NOT NULL,
+    username VARCHAR(12) NOT NULL,
+    id INT(4) NOT NULL,
+    grade INT(4) NULL,
+    comments VARCHAR(255) NULL,
+    PRIMARY KEY (evid , username),
+    CONSTRAINT RESJOB FOREIGN KEY (id)
+        REFERENCES job (id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT RESEV FOREIGN KEY (pevid)
+        REFERENCES evaluations (pevid)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT RESEMP FOREIGN KEY (username)
+        REFERENCES employee (username)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+CREATE TABLE needs (
+    id INT(4) NOT NULL,
+    title VARCHAR(36) NOT NULL,
+    PRIMARY KEY (id , title),
+    CONSTRAINT NEEDSJOB FOREIGN KEY (id)
+        REFERENCES job (id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT NEEDSANT FOREIGN KEY (title)
+        REFERENCES antikeim (title)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+CREATE TABLE requestevaluation (
+    username VARCHAR(12) NOT NULL,
+    id INT(4) NOT NULL,
+    submission_date DATETIME NOT NULL,
+    PRIMARY KEY (id , username),
+    CONSTRAINT REQJOB FOREIGN KEY (id)
+        REFERENCES job (id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT REQEMP FOREIGN KEY (username)
+        REFERENCES employee (username)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+INSERT INTO user VALUES
+('Dusk', 'sousou', '2000-03-03', 'Emmanouil', 'Foteinos', 'manolistg@hotmail.com'),
+('Markojimis7', 'kouneli', '2000-05-25', 'Panagiotis', 'Markodimos', 'markojim@yahoo.com'),
+('Scheider77','DaphnCole','2015-12-08','Daphne','Scheinder','schneider.daphne@hotmail.com'),
+('Xionatos','oscar', '1999-12-03', 'Michail', 'Theodorou','mikethe@gmail.com'),
+('elon_musk', 'xaea12', '2020-04-05', 'Elon', 'Musk', 'elmu@gmail.com'),
+('jojo','joanna1994','2018-03-06','Joanna','Laskaridi','jolask@hotmail.com'),
+('lew_bri', 'yog', '1983-02-10', 'Lewis', 'Brindley', 'lewbri@gmail.com'),
+('margaret09','maggie09','2019-05-10','Margaret','Jones','jones00@hotmail.com'),
+('telenic','monomachos','2019-04-05','Telemachos','Nicolotis','nicolotis@gmail.com'),
+('LeticGar','yellow','2016-09-22','Leticia', 'Granier', 'LeticiaRGranier@hotmail.com');
+
+
+INSERT INTO company VALUES
+('10101010', 'CALIFORNIA T.A.', 'Tesla Motors', '3982791081', 'Deer Creek Rd', '35', 'Palo Alto', 'USA'),
+('01010101', 'BRISTOL Τ.Α.',  'The Yogscast', '2780487398', 'Queen Square', '17', 'Bristol', 'United Kingdom');
+
+INSERT INTO manager VALUES
+('lew_bri','28','01010101'),
+('elon_musk','6','10101010'); 
+
+SET FOREIGN_KEY_CHECKS=0;
+INSERT INTO evaluator VALUES
+('Xionatos','10','01010101'),
+('Schneider','6','10101010');
+
+INSERT INTO employee VALUES
+('Markojimis7' ,'has worked as a test analyst and a test engineer','recommended by Convigton','voluntary work ', 'Testing Heroes 1st place'),
+('jojo' , 'has worked as secretary of Elon Musk','recommended by Elon Musk','Stylistics seminar','Social Media Star Women'),
+('telenic' , 'has worked as an ethical hacker','recommended by FrontEnd company','ethical hacking seminar','won MAP at HACK-THE-BOX'),
+('margaret09','has worked at many positions in Online Marketing department','recommended by toyshop chairman', 'Online Merchandise seminar',' won MIE during WEB&ONLINE'),
+('LeticGar', 'has worked as  HR and people management & as a part-time stand-up comedian','recommended by VODAFONE CYPRUS', 'Recruitment and Training seminars', 'Employee of 2015 at Vodafone');
+
+INSERT INTO employee_lang VALUES
+('Markojimis7','GR,EN'),
+('jojo','GR,EN'),
+('telenic','GR,EN,FR'),
+('margaret09','EN'),
+('LeticGar','GR,EN,SP');
+
+INSERT INTO degree VALUES
+('OSYL','UOP CEID',3),
+('Secondary Education','4o GEL XALANDRIOU',1),
+('ATFE','IEK DELTA',2),
+('MUVSW','UOA DIT',4),
+('BBA','UON ΒΑ',2);
+
+INSERT INTO has_degree VALUES
+('ATFE','IEK DELTA','telenic','2018','7.4'),
+('BBA','UON BA','LeticGar','2014','8.1'),
+('MUVSW','UOA DIT','margaret09','2017','7.1'),
+('OSYL','UOP CEID','Markojimis7','1999','8.6'),
+('Secondary Education','4o GEL XALANDRIOU','jojo','2010','9.3');
+
+INSERT INTO job VALUES
+('1000','2021-02-20','1150.0','IT SUPPORT SPECIALIST','Thoukididou 36, Patra 265 04','Xionatos','2021-01-01 12:00:00','2021-02-10 23:59:59'),
+('1001','2021-03-25','950.0','RECRUITMENT CONSULTANT','Leoforos Mesogeiwn & Synopis 2 Athina 115 27','Schneider','2021-01-10 00:00:15','2021-03-08 23:59:59');
+
+INSERT INTO requestevaluation VALUES
+('Markojimis7','1000','2021-01-12 15:06:18'),
+('margaret09','1000','2021-01-24 20:42:22'),
+('telenic','1000','2021-02-04 18:01:55'),
+('LeticGar','1000','2021-02-10 22:12:09');
+
+INSERT INTO evaluations VALUES
+('0000','Xionatos','4.0','3.4','1.5'),
+('0001','Xionatos','3.6','2.4','1.0'),
+('0002','Xionatos','3.2','2.2','2.0'),
+('0003','Xionatos','2.0','1.7',NULL);
+
+INSERT INTO evaluationresult VALUES
+('0000','9000','Markojimis7','1000','8','Very good skillset for the job,has to work on his anger'),
+('0001','9001','margaret09','1000','7','Suited for the job as her managing skills will get the team forward,decent knowlegde on the subject'),
+('0002','9002','telenic','1000',NULL,'Excellent skillset and great knowlegde on the IT depart.Lacks motivation..'),
+('0003','9003','LeticGar','1000',NULL,'Average to no knowlegde,should not get hired');
+
+DELIMITER $
+CREATE PROCEDURE calculate_grade(IN jobid INT(4), evus VARCHAR(12))
+BEGIN
+	DECLARE flag INT(1);
+	DECLARE peid INT(4);
+	DECLARE graded INT(4);
+	DECLARE ak1 FLOAT(2,1);
+	DECLARE ak2 FLOAT(2,1);
+	DECLARE ak3 FLOAT(2,1);
+	DECLARE ev_cursor CURSOR FOR
+		SELECT aksiologhsh_1, aksiologhsh_2, aksiologhsh_3, evaluationresult.pevid FROM evaluations INNER JOIN evaluationresult ON evaluationresult.pevid=evaluations.pevid WHERE id=jobid;
+	DECLARE CONTINUE HANDLER FOR NOT FOUND SET flag=1;
+	OPEN ev_cursor;
+	SET flag=0;
+	FETCH ev_cursor INTO ak1, ak2, ak3, peid;
+	WHILE (flag=0) DO
+		SELECT grade INTO graded FROM evaluationresult WHERE peid=pevid;
+		IF (ak1 is not NULL AND ak2 is not NULL AND ak3 is not NULL AND graded is NULL) THEN
+			ak1 = ak1 + ak2 + ak3;
+			ak1 = CAST(ak1 AS SIGNED);
+			UPDATE evaluationresult 
+			SET 
+    				grade = ak1
+			WHERE
+    				peid = pevid;
+		END IF;
+		FETCH ev_cursor INTO ak1, ak2, ak3, peid;
+	END WHILE;
+END$
+DELIMITER ;
+
+DROP PROCEDURE evaluations_status;
+DELIMITER $
+CREATE PROCEDURE evaluations_status(IN pos VARCHAR(40))
+BEGIN
+	DECLARE al INT;
+	DECLARE finished INT;
+	DECLARE posid INT(4);
+	DECLARE not_finished INT;
+	SELECT id INTO posid FROM job WHERE position=pos;
+	SELECT COUNT(*) INTO al FROM evaluationresult WHERE id=posid GROUP BY posid;
+	SELECT COUNT(*) INTO finished FROM evaluationresult WHERE id=posid AND grade is not NULL GROUP BY posid;
+	IF (al=0) THEN
+		SELECT "Δεν υπάρχουν υποψήφιοι";
+	ELSEIF (al > finished) THEN
+		SET not_finished = al - finished;
+		SELECT username AS "Όνομα χρήστη υποψηφίου", grade AS "Τελική Βαθμολογία" FROM evaluationresult WHERE id=posid AND grade is not NULL ORDER BY grade DESC;
+		SELECT "Αξιολόγηση σε εξελιξη ...εκκρεμούν ", not_finished, "αιτήσεις"; 
+	ELSE
+		SELECT "Οριστικοποιημένοι πίνακες";
+		SELECT username AS "Όνομα χρήστη υποψηφίου", grade AS "Τελική Βαθμολογία"  FROM evaluationresult WHERE id=posid ORDER BY grade DESC;
+	END IF;
+END$
+DELIMITER ;
